@@ -1,6 +1,7 @@
 from tkinter import *
 from tkinter import filedialog
 from tkinter import messagebox
+import numpy as np
 import pandas as pd
 import os.path as path
 import matplotlib.pyplot as plt
@@ -16,7 +17,7 @@ isCsv = True
 allFilesPath = ""
 fileExtension = ""
 sortedData = pd.DataFrame()
-allHeaders = ['Case', 'Area', 'Status']
+allHeaders = []
 dropList = []
 sortedFilePath = ""
 options = ['Select Chart Name', 'Closure', 'Work Areas']
@@ -25,6 +26,8 @@ totalCasesDataFrame = pd.DataFrame()
 
 window = Tk()
 window.title("Alps Support")
+mod = StringVar()
+mod.set('teamconnect')
 
 def captureFileData():
     filePathField.config(state=NORMAL)
@@ -127,7 +130,7 @@ def createSeparateFiles(fileExt, data):
             pd.DataFrame(groupByStatus.get_group(value)).to_csv(allFilesPath + '/' +value + fileExt)
         else:
             pd.DataFrame(groupByStatus.get_group(value)).to_excel(allFilesPath + '/' + value + fileExt)
-    caseData[allHeaders[2]]['Total'] = len(data['Status'])
+    caseData[allHeaders[2]]['Total'] = len(data[allHeaders[2]])
 
     # adding data for work areas
     for value, subset in groupByArea:
@@ -159,7 +162,8 @@ def printBarChart(status, caseCount, name):
     plt.figure(figsize=(6,3.5))
     plt.rcParams.update({'font.size': 9})
     plt.barh(status, caseCount)
-    plt.title('Mitratech Weekly '+ name + ' Bar Representation', fontsize=10)
+    print(mod.get().capitalize())
+    plt.title(mod.get().capitalize() + ' Weekly '+ name + ' Bar Representation', fontsize=10)
     plt.ylabel('Status')
     plt.xlabel('Number of Cases')
     for value, index in enumerate(caseCount):
@@ -173,7 +177,8 @@ def printPieChart(caseCount, status, name):
     plt.pie(caseCount, labels=status)
     plt.legend(status)
     plt.legend(fontsize='small')
-    plt.title('Mitratech Weekly '+ name + ' Pie Representation', fontsize=10)
+    print(mod.get().capitalize())
+    plt.title(mod.get().capitalize() + ' Weekly '+ name + ' Pie Representation', fontsize=10)
     plt.tight_layout()
     plt.show()
 
@@ -203,6 +208,7 @@ def getDataForWorkAreas(dataFromFile):
 
 def printChart():
     global allFilesPath
+    global allHeaders
 
     fileExtension = path.splitext(chartFilePath.get())[1]
     allFilesPath = path.dirname(chartFilePath.get())
@@ -212,6 +218,9 @@ def printChart():
             chartData = pd.read_csv(chartFilePath.get())
         else:
             chartData = pd.read_excel(chartFilePath.get())
+
+        allHeaders = chartData.columns.values
+        allHeaders = np.delete(allHeaders, 0)
 
         if chartData.isnull().values.any():
             messagebox.showinfo('Empty Fields', 'Please enter values in empty fields')
@@ -254,6 +263,15 @@ headFrame = Frame(window, padx = 5, pady = 5)
 headFrame.pack()
 heading = Label(headFrame, text = 'Weekly Report Generator', font = 'Times 18')
 heading.grid(row = 0, columnspan = 2)
+
+# module selection frame
+modFrame = LabelFrame(window, text = 'Create Report For', padx = 5, pady = 5)
+modFrame.pack(padx = 20, pady = 5)
+
+teamConnect = Radiobutton(modFrame, text = 'TeamConnect', variable = mod, value = 'teamconnect', width=23)
+teamConnect.grid(row = 0, column = 0, sticky = W)
+collaborati = Radiobutton(modFrame, text = 'Collaborati', variable = mod, value = 'collaborati', width=23)
+collaborati.grid(row = 0, column = 1, sticky = W)
 
 # file selection frame
 fileFrame = LabelFrame(window, text = 'File Selection', padx = 5, pady = 5)
