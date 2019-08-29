@@ -96,9 +96,17 @@ def sortData():
                             sortedData.iloc[index][allHeaders[2]] = 'Closed'
                             dropList.append(closedIndex)
                             break
+
                 #removing already added cases from closed data
                 for x in dropList:
                     closedData = closedData.drop(x,axis=0)
+
+                # changing headers of closed data(similar to that of all data) so thar cases in closed data
+                # be appended under first column of all data dataframe
+                clsHeaders = []
+                for x in range(len(closedData.columns)):
+                    clsHeaders.append(allHeaders[x])
+                closedData.columns = clsHeaders
 
                 #adding new closed cases
                 sortedData = sortedData.append(closedData, ignore_index=True)[sortedData.columns.tolist()]
