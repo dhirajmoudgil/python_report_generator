@@ -79,21 +79,22 @@ def sortData():
 
             #getting column headers
             allHeaders = unsortedData.columns.values
-            clsHeaders = closedData.columns.values
-
-            #checking if any cell is blank/null
+            clsHeaders = closedData.columns.values            #checking if any cell is blank/null
             if unsortedData.isnull().values.any():
                 messagebox.showinfo('Empty Fields', 'Some of the fields are empty')
                 sys.exit()
             else:
                 #removing duplicates
-                sortedData = unsortedData.drop_duplicates(allHeaders[0], keep='first')
+                sortedData = unsortedData.drop_duplicates(allHeaders[0], keep='last')
 
                 #merging closed cases in sorted data
                 for closedIndex in range(closedData.__len__()):
                     for index in range(sortedData.__len__()):
                         if sortedData.iloc[index][allHeaders[0]] == closedData.iloc[closedIndex][clsHeaders[0]]:
-                            sortedData.iloc[index][allHeaders[2]] = 'Closed'
+                            if mod.get() == 'teamconnect':
+                                sortedData.iloc[index][allHeaders[2]] = 'Closed'
+                            else:
+                                sortedData.iloc[index][allHeaders[1]] = 'Closed'
                             dropList.append(closedIndex)
                             break
 
@@ -115,36 +116,64 @@ def sortData():
                 generatedSortedFile['state'] = 'normal'
         except FileNotFoundError:
             messagebox.showerror('Error', 'File not found at entered path\nPlease enter correct path or select file from button')
+        except IndexError:
+            messagebox.showerror('Error', 'File having all cases has inappropriate columns, \nSelect correct Module')
     else:
         messagebox.showerror('Error', 'Enter File Path')
+
+def groupDataByStatus(data):
+    try:
+        if mod.get() == 'teamconnect':
+            return data.groupby(allHeaders[2])
+        else:
+            return data.groupby(allHeaders[1])
+    except IndexError:
+        messagebox.showerror('Error', 'File having all cases has inappropriate columns, \nSelect correct Module')
+        return 0
 
 def createSeparateFiles(fileExt, data):
     global caseData
 
-    caseData[allHeaders[2]] = {}  # Status
-    caseData[allHeaders[1]] = {}  # Work Areas
 
-    # grouping by work areas
-    groupByArea = data.groupby(allHeaders[1])
-    # grouping by status
-    groupByStatus = data.groupby(allHeaders[2])
+    if mod.get() == 'teamconnect':
+        caseData[allHeaders[2]] = {}  # Status column from TeamConnect data
+        caseData[allHeaders[1]] = {}  # Work Areas
 
+        # grouping by work areas
+        groupByArea = data.groupby(allHeaders[1])
+        # grouping by status
+        groupByStatus = data.groupby(allHeaders[2])
 
-    # adding data for closure
-    for value, subset in groupByStatus:
-        caseData[allHeaders[2]][value] = len(subset)
+        # adding closure data in caseData dictionary and creating files
+        createFilesPerStatus(groupByStatus, data, allHeaders[2], fileExt)
 
-        if fileExt == '.csv':
-            pd.DataFrame(groupByStatus.get_group(value)).to_csv(allFilesPath + '/' +value + fileExt)
-        else:
-            pd.DataFrame(groupByStatus.get_group(value)).to_excel(allFilesPath + '/' + value + fileExt)
-    caseData[allHeaders[2]]['Total'] = len(data[allHeaders[2]])
+        # adding work areas data in caseData dictionary
+        for value, subset in groupByArea:
+            caseData[allHeaders[1]][value] = len(subset)
+    else:
+        caseData[allHeaders[1]] = {}  # Status
 
-    # adding data for work areas
-    for value, subset in groupByArea:
-        caseData[allHeaders[1]][value] = len(subset)
+        # grouping by status
+        groupByStatus = data.groupby(allHeaders[1])
+
+        # adding data for closure
+        createFilesPerStatus(groupByStatus, data, allHeaders[1], fileExt)
 
     print(caseData)
+
+
+def createFilesPerStatus(groupedStatusData, totalData, columnName, fileExt):
+    global caseData
+
+    # adding data for closure
+    for value, subset in groupedStatusData:
+        caseData[columnName][value] = len(subset)
+
+        if fileExt == '.csv':
+            pd.DataFrame(groupedStatusData.get_group(value)).to_csv(allFilesPath + '/' + value + fileExt)
+        else:
+            pd.DataFrame(groupedStatusData.get_group(value)).to_excel(allFilesPath + '/' + value + fileExt)
+    caseData[columnName]['Total'] = len(totalData[columnName])
 
 def generateFile():
     global sortedFilePath
@@ -192,15 +221,18 @@ def printPieChart(caseCount, status, name):
 
 def getDataForClosure(dataFromFile):
     # grouping by status
-    groupByStatus = dataFromFile.groupby(allHeaders[2])
+    groupByStatus = groupDataByStatus(dataFromFile)
 
-    status = []
-    caseCount = []
-    for value, subset in groupByStatus:
-        status.append(value)
-        caseCount.append(len(subset))
+    if groupByStatus != 0:
+        status = []
+        caseCount = []
+        for value, subset in groupByStatus:
+            status.append(value)
+            caseCount.append(len(subset))
 
-    return (status, caseCount)
+        return (status, caseCount)
+    else:
+        messagebox.showerror('Error', 'File having all cases has inappropriate columns, \nSelect correct Module')
 
 def getDataForWorkAreas(dataFromFile):
     # grouping by work areas
@@ -218,10 +250,11 @@ def printChart():
     global allFilesPath
     global allHeaders
 
-    fileExtension = path.splitext(chartFilePath.get())[1]
-    allFilesPath = path.dirname(chartFilePath.get())
+    fileExtension = path.splitext(chartFilePath.get())[1]   # getting file extension
+    allFilesPath = path.dirname(chartFilePath.get())    # getting absolute path of sorted file
 
     try:
+        # reading sorted file
         if fileExtension == '.csv':
             chartData = pd.read_csv(chartFilePath.get())
         else:
@@ -236,35 +269,43 @@ def printChart():
             createSeparateFiles(fileExtension, chartData)
 
             # closure chart
-            if chName.get() == options[1]:
+            if chName.get() == options[1]:  # Closure
                 cookedData = getDataForClosure(chartData)
 
-                if rd.get() == 1:
+                if rd.get() == 1:   # bar chart
                     printBarChart(cookedData[0], cookedData[1], options[1])
 
-                elif rd.get() == 2:
+                elif rd.get() == 2:     # pie chart
                     printPieChart(cookedData[1], cookedData[0], options[1])
 
                 else:
                     messagebox.showinfo('Success', 'Nothing!')
 
             # work areas chart
-            elif chName.get() == options[2]:
-                cookedData = getDataForWorkAreas(chartData)
+            elif chName.get() == options[2]:    # Work Areas
 
-                if rd.get() == 1:
-                    printBarChart(cookedData[0], cookedData[1], options[2])
+                if mod.get() == 'teamconnect':
+                    cookedData = getDataForWorkAreas(chartData)
 
-                elif rd.get() == 2:
-                    printPieChart(cookedData[1], cookedData[0], options[2])
+                    if rd.get() == 1:   # bar chart
+                        printBarChart(cookedData[0], cookedData[1], options[2])
 
+                    elif rd.get() == 2:     # pie chart
+                        printPieChart(cookedData[1], cookedData[0], options[2])
+
+                    else:
+                        messagebox.showinfo('Success', 'Nothing!')
                 else:
-                    messagebox.showinfo('Success', 'Nothing!')
+                    messagebox.showerror('Error', 'Select TeamConnect Module')
 
             else:
                 messagebox.showerror('Error', 'Please Specify Chart Name')
     except FileNotFoundError:
         messagebox.showerror('Error', 'File not found at entered path\nPlease enter correct path or select file from button')
+    except IndexError:
+        messagebox.showerror('Error', 'Select Correct Module')
+    except TypeError:
+        messagebox.showerror('Error', 'Select '+mod.get()+' or start again!')
 
 # header frame
 headFrame = Frame(window, padx = 5, pady = 5)
