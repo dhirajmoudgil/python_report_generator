@@ -175,9 +175,30 @@ def createFilesPerStatus(groupedStatusData, totalData, columnName, fileExt):
             pd.DataFrame(groupedStatusData.get_group(value)).to_excel(allFilesPath + '/' + value + fileExt)
     caseData[columnName]['Total'] = len(totalData[columnName])
 
+def removeWhiteSpaces(unstrippedData):
+
+    allHeaders = unstrippedData.columns.values
+    strippedData = pd.DataFrame(allHeaders)          # making an empty dataframenamed 'strippedData' with similar headers
+    print('stripped data DF: ')
+    print(strippedData)
+    print('unstripped data DF')
+    print(unstrippedData)
+
+    print('index')
+
+    for columnName in allHeaders:
+        print(range(len(unstrippedData[columnName])))
+        for index in range(len(unstrippedData[columnName])):
+            strippedData.iloc[index][columnName] = str(unstrippedData.iloc[index][columnName]).strip()
+
+    return strippedData
+
 def generateFile():
     global sortedFilePath
     global allHeaders
+
+    cleanData = removeWhiteSpaces(sortedData)
+    print(cleanData)
 
     if isCsv:
         sortedFilePath = allFilesPath+'/sortedReport.csv'
