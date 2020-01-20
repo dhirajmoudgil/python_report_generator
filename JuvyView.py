@@ -178,18 +178,12 @@ def createFilesPerStatus(groupedStatusData, totalData, columnName, fileExt):
 def removeWhiteSpaces(unstrippedData):
 
     allHeaders = unstrippedData.columns.values
-    strippedData = pd.DataFrame(allHeaders)          # making an empty dataframenamed 'strippedData' with similar headers
-    print('stripped data DF: ')
-    print(strippedData)
-    print('unstripped data DF')
-    print(unstrippedData)
-
-    print('index')
+    # making an empty dataframenamed 'strippedData' with similar headers
+    strippedData = pd.DataFrame(columns=[allHeaders])
 
     for columnName in allHeaders:
-        print(range(len(unstrippedData[columnName])))
         for index in range(len(unstrippedData[columnName])):
-            strippedData.iloc[index][columnName] = str(unstrippedData.iloc[index][columnName]).strip()
+            strippedData.at[index, columnName] = str(unstrippedData.iloc[index][columnName]).strip()
 
     return strippedData
 
@@ -198,18 +192,17 @@ def generateFile():
     global allHeaders
 
     cleanData = removeWhiteSpaces(sortedData)
-    print(cleanData)
 
     if isCsv:
         sortedFilePath = allFilesPath+'/sortedReport.csv'
-        sortedData.to_csv(sortedFilePath)
+        cleanData.to_csv(sortedFilePath)
         chartFilePath.delete(0, 'end')
         chartFilePath.insert(INSERT,sortedFilePath)
         messagebox.showinfo('Success', 'File Created!\nPlease fill empty fields')
         printBtn['state'] = 'normal'
     else:
         sortedFilePath = allFilesPath+'/sortedReport'+fileExtension
-        sortedData.to_excel(sortedFilePath)
+        cleanData.to_excel(sortedFilePath)
         chartFilePath.delete(0, 'end')
         chartFilePath.insert(INSERT,sortedFilePath)
         messagebox.showinfo('Success', 'File Created!\nPlease fill empty fields')
