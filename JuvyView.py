@@ -5,7 +5,6 @@ import numpy as np
 import pandas as pd
 import os.path as path
 import matplotlib.pyplot as plt
-import pyperclip as clip
 import os
 
 #Prerequisites:
